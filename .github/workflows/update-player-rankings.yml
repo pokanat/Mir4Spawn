@@ -1,0 +1,34 @@
+name: Update official MIR4 player rankings
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/collect_rankings.py
+      - .github/workflows/update-player-rankings.yml
+  schedule:
+    - cron: '23 */2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: mir4-player-rankings
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Collect and validate public rankings
+        run: python scripts/collect_rankings.py
+      - name: Save changed ranking snapshots
+        run: |
+          git add docs/players/data.json
+          if ! git diff --cached --quiet; then
+            git -c user.name='MIR4 rankings' -c user.email='rankings@users.noreply.github.com' commit -m 'Refresh official player ranking snapshot'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
