@@ -19,6 +19,7 @@
     .card.flash-red{background:#701c2c}
     @media(prefers-reduced-motion:reduce){.spawn-soon td{background:#541e2b!important}.card.spawn-soon{background:#541e2b}}
     .finished-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:10px}.finished-boss{display:flex;gap:12px;padding:15px;background:var(--panel);border:1px solid var(--line);border-radius:9px;align-items:flex-start;cursor:pointer}.finished-boss:hover{background:var(--panel2)}.finished-boss input{flex-shrink:0;margin-top:3px}.finished-boss strong{display:block;font-size:15px}.finished-boss .loc{display:block;font-size:14px;margin-top:4px}.finished-list .empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:9px}
+    .site-footer{background:#fff;color:#333;margin-top:32px;padding:18px 30px;font-size:14px;line-height:1.5}.footer-inner{max-width:1340px;margin:0 auto;display:flex;justify-content:space-between;gap:24px}.footer-title{font-weight:750}.footer-credit p,.footer-support p{margin:0}.footer-credit .copyright{margin-top:14px;font-size:12px}.footer-support{text-align:right;max-width:100%}.footer-support .wallet{margin-top:22px;overflow-wrap:anywhere}.wallet-address{color:#a74600;font-size:13px}@media(max-width:700px){.site-footer{padding:18px 15px}.footer-inner{flex-direction:column;gap:18px}.footer-support{text-align:left}.footer-support .wallet{margin-top:5px}}
   </style>
 </head>
 <body>
@@ -34,6 +35,19 @@
     <div class="finished-list" id="finished-list"></div>
   </section>
 </main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-credit">
+      <p class="footer-title">MIR4 Boss Spawn Tracker</p>
+      <p>Developed with ChatGpt by Pokanat</p>
+      <p class="copyright">© <span id="copyright-year"></span> MIR4 Tracker • Not affiliated with Wemade</p>
+    </div>
+    <div class="footer-support">
+      <p>Support the project:</p>
+      <p class="wallet">WEMIX PLAY: <span class="wallet-address">0xb565d07be3ee2b9777bf977ca73758edaecc9b33</span></p>
+    </div>
+  </div>
+</footer>
 <div class="toast" id="toast" role="alert"></div>
 <script>
   // Times transcribed from the supplied Mirage Weekly Spawns image. 12 means 00/12.
@@ -116,7 +130,7 @@
   function checkAlarms(now){if(!enabled)return;const hits=[];for(const b of bosses){if(muted.has(b.id)||finished.has(b.id)||!eligible(b)||!b.times.length)continue;const at=nextAt(b,lastTick+120000-1),trigger=at-120000,key=b.id+'-'+at;if(trigger>lastTick&&trigger<=now&&at>now&&!fired.has(key)){fired.add(key);hits.push(b)}}if(hits.length)showAlarm(hits);if(fired.size>300)fired.clear()}
   let finishedRenderKey;
   function renderFinished(){const done=bosses.filter(b=>finished.has(b.id)),key=done.map(b=>b.id).join(',');if(key===finishedRenderKey)return;finishedRenderKey=key;$('finished-list').innerHTML=done.length?done.map(b=>`<label class="finished-boss"><input class="on" type="checkbox" checked data-restore="${b.id}" aria-label="Uncheck to restore ${esc(b.name)}"><span><strong>${esc(b.name)}</strong><span class="loc">Layer ${b.layer} · ${esc(b.world)} · ${esc(b.location)}</span></span></label>`).join(''):'<div class="empty">No finished bosses yet.</div>'}
-  function draw(){const now=Date.now(), upcoming=bosses.filter(b=>eligible(b)&&!finished.has(b.id)).map(b=>({...b,at:nextAt(b,now)})).sort((a,b)=>a.at-b.at||a.name.localeCompare(b.name));const shift=new Date(now+offset*3600000);$('server-clock').textContent=shift.toISOString().slice(11,19);$('clock-label').textContent=`${serverRegions.find(r=>r[2]===offset)[1]} · UTC ${offset<0?'−':'+'}${Math.abs(offset)}`;$('finished-count').textContent=finished.size?`· ${finished.size} finished`:'';
+  function draw(){$('copyright-year').textContent=new Date().getFullYear();const now=Date.now(), upcoming=bosses.filter(b=>eligible(b)&&!finished.has(b.id)).map(b=>({...b,at:nextAt(b,now)})).sort((a,b)=>a.at-b.at||a.name.localeCompare(b.name));const shift=new Date(now+offset*3600000);$('server-clock').textContent=shift.toISOString().slice(11,19);$('clock-label').textContent=`${serverRegions.find(r=>r[2]===offset)[1]} · UTC ${offset<0?'−':'+'}${Math.abs(offset)}`;$('finished-count').textContent=finished.size?`· ${finished.size} finished`:'';
     $('upcoming').innerHTML=upcoming.length?upcoming.slice(0,3).map((b,i)=>`<article class="card${spawnClass(b.at,now)}"><span class="rank">${i===0?'Next up':`Coming up · ${i+1}`}</span><h3>${esc(b.name)}</h3><div class="place">Layer ${b.layer} · ${b.world} · ${esc(b.location)}</div><div class="bottom"><strong class="count">${countdown(b.at-now)}</strong><span class="at">Your time<b>${atLocal(b.at)}</b></span></div><div class="bar" style="width:${Math.max(0,100-(b.at-now)/7200000*100)}%"></div></article>`).join(''):'<div class="empty">No timed bosses to show. Reset all bosses to bring them back.</div>';
     const ordered=upcoming.map(b=>{const previous=lastAt(b,now),recent=now-previous<120000;return {...b,recent,rowAt:recent?previous:b.at,refreshAt:previous+120000}}).sort((a,b)=>a.rowAt-b.rowAt||a.name.localeCompare(b.name)),query=$('search').value.trim().toLowerCase(),windowMinutes=windowSelect.value==='all'?Infinity:Number(windowSelect.value),shown=ordered.filter(b=>(layer==='all'||String(b.layer)===layer)&&(b.recent||b.rowAt-now<=windowMinutes*60000)&&`${b.name} ${b.location} ${b.world}`.toLowerCase().includes(query));$('rows').innerHTML=shown.map(b=>`<tr class="${spawnClass(b.rowAt,now).trim()}"><td><input class="on" type="checkbox" data-finish="${b.id}" aria-label="Mark ${esc(b.name)} finished"></td><td><input class="on" type="checkbox" data-id="${b.id}" aria-label="Alarm for ${esc(b.name)}" ${muted.has(b.id)?'':'checked'}></td><td><div class="boss">${esc(b.name)}</div><div class="loc">${esc(b.location)}</div></td><td><span class="tag">L${b.layer} · ${b.world}</span> <span class="loc">${esc(b.level)}</span></td><td class="spawn">${b.recent?`Spawned · ${atLocal(b.rowAt)}`:atLocal(b.rowAt)}</td><td class="next">${b.recent?`Refresh ${countdown(b.refreshAt-now)}`:countdown(b.rowAt-now)}</td></tr>`).join('');$('empty').hidden=shown.length!==0;
     renderFinished();checkAlarms(now);lastTick=now}
