@@ -73,8 +73,10 @@
   const $=id=>document.getElementById(id), tz=$('timezone'), levelSelect=$('level'), soundSelect=$('sound'), windowSelect=$('spawn-window'), pref='mir4spawn-v1';
   let saved={};try{saved=JSON.parse(localStorage.getItem(pref)||'{}')}catch{}
   let offset=Number.isFinite(+saved.offset)?+saved.offset:8, muted=new Set(Array.isArray(saved.muted)?saved.muted:[]), finished=new Set(Array.isArray(saved.finished)?saved.finished.filter(id=>Number.isInteger(id)&&id>=0&&id<bosses.length):[]), enabled=false, layer='all', audio, lastTick=Date.now(), fired=new Set(), activeSound=new Set(), previewTimer, toastTimer, notificationWorker;
-  for(let i=141;i<=200;i++){const opt=document.createElement('option');opt.value=i;opt.textContent=`Level ${i}`;levelSelect.append(opt)}
-  levelSelect.value=saved.level==='all'?'200':Number.isInteger(+saved.level)&&+saved.level>=140&&+saved.level<=200?String(saved.level):'140';
+  const levelRequirements=[...new Set(bosses.map(b=>parseInt(b.level,10)).filter(n=>Number.isFinite(n)&&n>140))].sort((a,b)=>a-b);
+  for(const level of levelRequirements){const opt=document.createElement('option');opt.value=level;opt.textContent=`${level}+`;levelSelect.append(opt)}
+  const savedLevel=saved.level==='all'?Infinity:Number(saved.level);
+  levelSelect.value=String([140,...levelRequirements].filter(n=>n<=savedLevel).pop()||140);
   soundSelect.value=['bell','chime','siren','pulse','arcade','horn','gong','radar','fanfare','rapid'].includes(saved.sound)?saved.sound:'bell';
   windowSelect.value=['all','2','10','30','60'].includes(saved.spawnWindow)?saved.spawnWindow:'all';
   const serverRegions=[['Asia','ASIA',8],['India Mena','IM',6],['Europe','EU',2],['South America','SA',-3],['North America','NA',-4]];
